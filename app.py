@@ -711,7 +711,7 @@ def main():
         st.error("Dataset não encontrado ou inválido.")
         return
 
-    st.sidebar.header("Filtros de análise")
+    st.sidebar.header("Filtro de análise")
 
     min_use = float(df[USAGE].min())
     max_use = float(df[USAGE].max())
