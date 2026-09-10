@@ -68,31 +68,44 @@ def _read_file(path: Path):
 
 def prepare_dataframe(df: pd.DataFrame):
     if df is None or df.empty:
-        return None, None, None, None
+        return None, None
 
     usage_candidates = ["avg_daily_sm_hours", "avg_daily_screen_time_hours", "daily_social_media_usage_hours"]
     productivity_candidates = ["productivity_self_rating", "productivity_rating", "productivity_score"]
     night_candidates = ["late_night_scrolling", "nightly_social_media_usage", "night_time_social_media_usage"]
     sleep_candidates = ["sleep_quality", "sleep_quality_score", "avg_sleep_hours"]
+    age_candidates = ["age", "user_age", "participant_age"]
+    fomo_candidates = ["fomo_score", "fomo", "fomo_level"]
 
     usage_col = next((c for c in usage_candidates if c in df.columns), None)
     productivity_col = next((c for c in productivity_candidates if c in df.columns), None)
     night_col = next((c for c in night_candidates if c in df.columns), None)
     sleep_col = next((c for c in sleep_candidates if c in df.columns), None)
+    age_col = next((c for c in age_candidates if c in df.columns), None)
+    fomo_col = next((c for c in fomo_candidates if c in df.columns), None)
 
     if not all([usage_col, productivity_col, night_col, sleep_col]):
-        return None, None, None, None
+        return None, None
 
-    cleaned = df[[usage_col, productivity_col, night_col, sleep_col]].copy()
+    base_cols = [usage_col, productivity_col, night_col, sleep_col]
+    extra_cols = [c for c in [age_col, fomo_col] if c is not None]
+
+    cleaned = df[base_cols + extra_cols].copy()
     cleaned[usage_col] = pd.to_numeric(cleaned[usage_col], errors="coerce")
     cleaned[productivity_col] = pd.to_numeric(cleaned[productivity_col], errors="coerce")
+
+    if fomo_col:
+        cleaned[fomo_col] = pd.to_numeric(cleaned[fomo_col], errors="coerce")
+    if age_col:
+        cleaned[age_col] = pd.to_numeric(cleaned[age_col], errors="coerce")
 
     sleep_order = {"Very poor": 1, "Poor": 2, "Fair": 3, "Good": 4, "Very good": 5}
     night_order = {"Never": 0, "Rarely": 1, "Sometimes": 2, "Often": 3, "Daily": 4}
 
     cleaned[sleep_col] = cleaned[sleep_col].replace(sleep_order)
     cleaned[night_col] = cleaned[night_col].replace(night_order)
-    cleaned = cleaned.dropna()
+
+    cleaned = cleaned.dropna(subset=base_cols)
 
     cleaned["Uso noturno"] = pd.cut(
         cleaned[night_col],
@@ -103,7 +116,23 @@ def prepare_dataframe(df: pd.DataFrame):
 
     cleaned["Destaque"] = cleaned["Uso noturno"].apply(lambda x: "Foco" if x == "Diariamente" else "Neutro")
 
-    return cleaned, usage_col, productivity_col, sleep_col
+    if age_col:
+        cleaned["Faixa etária"] = pd.cut(
+            cleaned[age_col],
+            bins=[0, 24, 34, 44, 54, 150],
+            labels=["Até 24", "25–34", "35–44", "45–54", "55+"],
+        )
+
+    cols = {
+        "usage": usage_col,
+        "productivity": productivity_col,
+        "night": night_col,
+        "sleep": sleep_col,
+        "age": age_col,
+        "fomo": fomo_col,
+    }
+
+    return cleaned, cols
 
 
 # ==========================================
@@ -152,6 +181,72 @@ def build_charts(df: pd.DataFrame, usage_col: str, productivity_col: str, sleep_
     return scatter, box, corr
 
 
+def build_age_charts(df: pd.DataFrame, cols: dict):
+    """Par de gráficos novo: uso médio e FOMO médio por faixa etária,
+    lado a lado, com a mesma ordem de faixas no eixo X (small multiples)."""
+    age_col = cols.get("age")
+    fomo_col = cols.get("fomo")
+
+    if not age_col or not fomo_col or "Faixa etária" not in df.columns:
+        return None, None
+
+    age_order = ["Até 24", "25–34", "35–44", "45–54", "55+"]
+    age_df = df.dropna(subset=["Faixa etária", fomo_col])
+    if age_df.empty:
+        return None, None
+
+    usage_by_age = (
+        age_df.groupby("Faixa etária", observed=True)[cols["usage"]]
+        .mean()
+        .reindex(age_order)
+        .reset_index(name="Uso médio diário (h)")
+    )
+
+    fomo_by_age = (
+        age_df.groupby("Faixa etária", observed=True)[fomo_col]
+        .mean()
+        .reindex(age_order)
+        .reset_index(name="FOMO médio")
+    )
+
+    age_bar = px.bar(
+        usage_by_age,
+        x="Faixa etária",
+        y="Uso médio diário (h)",
+        text_auto=".1f",
+    )
+    age_bar.update_traces(marker_color="#666666", width=0.55)
+    age_bar.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="#F8F9FA",
+        font=dict(color="#333333", size=12),
+        xaxis=dict(showgrid=False, title_font=dict(color="#333333"), tickfont=dict(color="#333333")),
+        yaxis=dict(showgrid=True, gridcolor="#DDDDDD", title_font=dict(color="#333333"), tickfont=dict(color="#333333")),
+        margin=dict(l=0, r=0, t=30, b=0),
+    )
+
+    # Destaca em vermelho a faixa etária com maior FOMO médio; as demais
+    # ficam em laranja claro, mesma lógica de destaque do resto do dashboard
+    max_val = fomo_by_age["FOMO médio"].max()
+    colors = ["#FF3300" if v == max_val else "#FFAD66" for v in fomo_by_age["FOMO médio"]]
+
+    fomo_bar = px.bar(
+        fomo_by_age,
+        x="Faixa etária",
+        y="FOMO médio",
+        text_auto=".1f",
+    )
+    fomo_bar.update_traces(marker_color=colors, width=0.55)
+    fomo_bar.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="#F8F9FA",
+        font=dict(color="#333333", size=12),
+        xaxis=dict(showgrid=False, title_font=dict(color="#333333"), tickfont=dict(color="#333333")),
+        yaxis=dict(showgrid=True, gridcolor="#DDDDDD", range=[0, 10], title_font=dict(color="#333333"), tickfont=dict(color="#333333")),
+        margin=dict(l=0, r=0, t=30, b=0),
+    )
+
+    return age_bar, fomo_bar
+
+
 # ==========================================
 # 3. INTERFACE E APLICAÇÃO DO MANTRA
 # ==========================================
@@ -163,10 +258,14 @@ def main():
         st.error("Dataset não encontrado.")
         return
 
-    cleaned, usage_col, productivity_col, sleep_col = prepare_dataframe(df)
+    cleaned, cols = prepare_dataframe(df)
     if cleaned is None:
         st.error("Falha ao processar colunas.")
         return
+
+    usage_col = cols["usage"]
+    productivity_col = cols["productivity"]
+    sleep_col = cols["sleep"]
 
     st.sidebar.header("🔍 Filtros de Análise")
     st.sidebar.markdown("*(Zoom/Filter)*")
@@ -219,11 +318,42 @@ def main():
             )
             st.plotly_chart(box, use_container_width=True)
 
+        # TERCEIRA PERGUNTA (novos gráficos: uso e FOMO por faixa etária)
+        age_bar, fomo_bar = build_age_charts(df_filtrado, cols)
+
+        if age_bar is not None:
+            with st.container(border=True):
+                st.markdown(
+                    """
+                    <p style='color: #FF3300; font-size: 1.2em; font-weight: bold; margin-bottom: 10px;'>
+                    Como o uso diário de redes sociais e o nível de FOMO variam entre as diferentes faixas etárias?
+                    </p>
+                    """, unsafe_allow_html=True
+                )
+
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    st.caption("Uso médio diário por faixa etária")
+                    st.plotly_chart(age_bar, use_container_width=True)
+                with col_b:
+                    st.caption("Nível médio de FOMO por faixa etária")
+                    st.plotly_chart(fomo_bar, use_container_width=True)
+
+                st.info(
+                    "**Como comparar:** os dois gráficos compartilham o mesmo eixo de faixas "
+                    "etárias, observe se os picos de uso coincidem com os picos de FOMO "
+                    "(faixa destacada em vermelho)."
+                )
+        else:
+            st.warning(
+                "Colunas de idade e/ou FOMO não encontradas no dataset"
+            )
+
     else:
         st.warning("Dados insuficientes para os filtros selecionados.")
 
     with st.expander("Ver Dados Brutos (Details on Demand)"):
-        st.dataframe(df_filtrado.drop(columns=["Destaque"]), use_container_width=True)
+        st.dataframe(df_filtrado.drop(columns=["Destaque"], errors="ignore"), use_container_width=True)
 
 if __name__ == "__main__":
     main()
