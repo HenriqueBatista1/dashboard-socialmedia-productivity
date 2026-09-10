@@ -741,6 +741,80 @@ def main():
             div[data-baseweb="slider"] > div > div {{
                 background-color: {PRIMARY} !important;
             }}
+            /* ==================================================
+               IDENTIDADE DOS COMPONENTES NATIVOS DO STREAMLIT
+               ================================================== */
+
+            /* A versão atual do Streamlit usa --st-primary-color */
+            :root,
+            .stApp,
+            [data-testid="stAppViewContainer"],
+            [data-testid="stSidebar"] {{
+                --st-primary-color: {PRIMARY} !important;
+                --primary-color: {PRIMARY} !important;
+            }}
+
+            /* Abas: selecionada, hover e linha inferior */
+            .stTabs button[data-baseweb="tab"][aria-selected="true"],
+            .stTabs button[data-baseweb="tab"][aria-selected="true"] p {{
+                color: {PRIMARY} !important;
+            }}
+
+            .stTabs button[data-baseweb="tab"]:hover,
+            .stTabs button[data-baseweb="tab"]:hover p {{
+                color: {PRIMARY_DARK} !important;
+            }}
+
+            .stTabs div[data-baseweb="tab-highlight"] {{
+                background-color: {PRIMARY} !important;
+            }}
+
+            /* Slider: bolinhas, números e cor principal */
+            .stSlider [role="slider"] {{
+                background-color: {PRIMARY} !important;
+                border-color: {PRIMARY} !important;
+                box-shadow: 0 0 0 1px {PRIMARY} !important;
+            }}
+
+            .stSlider [data-testid="stThumbValue"],
+            .stSlider [data-testid="stThumbValue"] * {{
+                color: {PRIMARY} !important;
+            }}
+
+            /* Em versões que usam BaseWeb diretamente */
+            div[data-testid="stSlider"] div[data-baseweb="slider"] {{
+                --st-primary-color: {PRIMARY} !important;
+            }}
+
+            div[data-testid="stSlider"] div[data-baseweb="slider"] [role="slider"] {{
+                background-color: {PRIMARY} !important;
+                border-color: {PRIMARY} !important;
+            }}
+
+            /* Campos mínimo/máximo */
+            div[data-testid="stNumberInput"]:focus-within {{
+                --st-primary-color: {PRIMARY} !important;
+            }}
+
+            div[data-testid="stNumberInput"]:focus-within > div {{
+                border-color: {PRIMARY} !important;
+            }}
+
+            /* Botão de consulta / retorno */
+            button[data-testid="stBaseButton-primary"],
+            div.stButton > button[kind="primary"] {{
+                background-color: {PRIMARY} !important;
+                border-color: {PRIMARY} !important;
+                color: white !important;
+            }}
+
+            button[data-testid="stBaseButton-primary"]:hover,
+            div.stButton > button[kind="primary"]:hover {{
+                background-color: {PRIMARY_DARK} !important;
+                border-color: {PRIMARY_DARK} !important;
+                color: white !important;
+            }}
+
         </style>
         """,
         unsafe_allow_html=True,
@@ -852,6 +926,7 @@ def main():
     if st.sidebar.button(
         sidebar_button_label,
         use_container_width=True,
+        type="primary",
         help=sidebar_button_help,
     ):
         st.session_state.show_raw_data = not st.session_state.show_raw_data
