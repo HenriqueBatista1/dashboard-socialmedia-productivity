@@ -417,16 +417,23 @@ def build_age_charts(df):
         .reset_index(name="FOMO médio")
     )
 
-    age_bar = px.bar(
+    age_bar = px.line(
         usage_by_age,
         x="Faixa etária",
         y="Uso médio diário (h)",
-        text_auto=".1f",
+        markers=True,
+        text="Uso médio diário (h)",
         category_orders={"Faixa etária": AGE_ORDER},
     )
     age_bar.update_traces(
-        marker_color=PRIMARY,
-        width=0.55,
+        line=dict(color=PRIMARY, width=3),
+        marker=dict(
+            color=PRIMARY_DARK,
+            size=10,
+            line=dict(color="white", width=1.5),
+        ),
+        texttemplate="%{text:.1f} h",
+        textposition="top center",
         hovertemplate=(
             "Faixa etária: %{x}"
             "<br>Uso médio diário: %{y:.1f} h"
@@ -519,25 +526,43 @@ def build_dependency_charts(df):
         .reset_index(name="Qualidade média do sono")
     )
 
-    sleep_bar = px.bar(
+    sleep_lollipop = px.scatter(
         sleep_by_fomo,
         x="Nível de FOMO",
         y="Qualidade média do sono",
-        text_auto=".2f",
+        text="Qualidade média do sono",
         category_orders={"Nível de FOMO": FOMO_ORDER},
     )
-    sleep_bar.update_traces(
-        marker_color=PRIMARY,
-        width=0.55,
+
+    sleep_lollipop.update_traces(
+        marker=dict(
+            color=PRIMARY_DARK,
+            size=14,
+            line=dict(color="white", width=1.5),
+        ),
+        texttemplate="%{text:.2f}",
+        textposition="top center",
         hovertemplate=(
             "Nível de FOMO: %{x}"
             "<br>Qualidade média do sono: %{y:.2f}"
             "<extra></extra>"
         ),
     )
-    style_chart(sleep_bar, [0, 5])
 
-    return profile_bar, sleep_bar
+    for _, row in sleep_by_fomo.iterrows():
+        sleep_lollipop.add_shape(
+            type="line",
+            x0=row["Nível de FOMO"],
+            x1=row["Nível de FOMO"],
+            y0=0,
+            y1=row["Qualidade média do sono"],
+            line=dict(color=PRIMARY_LIGHT, width=5),
+            layer="below",
+        )
+
+    style_chart(sleep_lollipop, [0, 5])
+
+    return profile_bar, sleep_lollipop
 
 
 def build_additional_charts(df):
@@ -565,31 +590,47 @@ def build_additional_charts(df):
         "Uso muito alto": PRIMARY_DARK,
     }
 
-    usage_profile_bar = px.bar(
+    usage_profile_donut = px.pie(
         usage_profile,
-        x="Intensidade de uso",
-        y="Participantes",
-        color="Intensidade de uso",
-        text="Rótulo",
+        names="Intensidade de uso",
+        values="Participantes",
+        hole=0.56,
         category_orders={"Intensidade de uso": USAGE_ORDER},
+        color="Intensidade de uso",
         color_discrete_map=usage_colors,
-        labels={
-            "Intensidade de uso": "Intensidade de uso",
-            "Participantes": "Participantes",
-        },
     )
-    usage_profile_bar.update_traces(
-        width=0.58,
+
+    usage_profile_donut.update_traces(
+        sort=False,
+        textinfo="percent+label",
         textposition="outside",
-        cliponaxis=False,
+        marker=dict(line=dict(color="white", width=2)),
         hovertemplate=(
-            "Intensidade: %{x}"
-            "<br>Participantes: %{y}"
+            "<b>%{label}</b>"
+            "<br>Participantes: %{value}"
+            "<br>Percentual: %{percent}"
             "<extra></extra>"
         ),
     )
-    style_chart(usage_profile_bar, height=330)
-    usage_profile_bar.update_layout(showlegend=False)
+
+    usage_profile_donut.update_layout(
+        showlegend=False,
+        plot_bgcolor=BACKGROUND,
+        paper_bgcolor=BACKGROUND,
+        font=dict(color=TEXT, size=12),
+        height=350,
+        margin=dict(l=30, r=30, t=20, b=20),
+        annotations=[
+            dict(
+                text=f"<b>{int(total)}</b><br>participantes",
+                x=0.5,
+                y=0.5,
+                showarrow=False,
+                font=dict(size=17, color=TEXT),
+                align="center",
+            )
+        ],
+    )
 
     # 2) Relação ainda não exibida: produtividade média por nível de FOMO.
     productivity_fomo = (
@@ -622,7 +663,7 @@ def build_additional_charts(df):
     )
     style_chart(productivity_fomo_bar, height=330)
 
-    return usage_profile_bar, productivity_fomo_bar
+    return usage_profile_donut, productivity_fomo_bar
 
 
 # ==========================================
@@ -796,12 +837,25 @@ def main():
     st.sidebar.divider()
     st.sidebar.subheader("Consulta")
 
+    sidebar_button_label = (
+        "Voltar ao painel"
+        if st.session_state.show_raw_data
+        else "Consultar dados brutos"
+    )
+
+    sidebar_button_help = (
+        "Retorna para as análises do painel."
+        if st.session_state.show_raw_data
+        else "Abre a tabela com os dados considerados pelo filtro atual."
+    )
+
     if st.sidebar.button(
-        "Consultar dados brutos",
+        sidebar_button_label,
         use_container_width=True,
-        help="Abre a tabela com os dados considerados pelo filtro atual.",
+        help=sidebar_button_help,
     ):
-        st.session_state.show_raw_data = True
+        st.session_state.show_raw_data = not st.session_state.show_raw_data
+        st.rerun()
 
     st.title("Painel de Mídias Sociais e Produtividade")
     st.caption(
@@ -846,10 +900,6 @@ def main():
                 .replace(",", ".")
             )
 
-            if st.button("Voltar às análises"):
-                st.session_state.show_raw_data = False
-                st.rerun()
-
         return
 
     if len(filtered) <= 5:
@@ -858,8 +908,8 @@ def main():
 
     scatter, box, focus_bar, heatmap, corr = build_charts(filtered)
     age_bar, fomo_bar = build_age_charts(filtered)
-    profile_bar, sleep_bar = build_dependency_charts(filtered)
-    usage_profile_bar, productivity_fomo_bar = build_additional_charts(filtered)
+    profile_bar, sleep_lollipop = build_dependency_charts(filtered)
+    usage_profile_donut, productivity_fomo_bar = build_additional_charts(filtered)
 
     tab_perfil, tab_foco, tab_prod, tab_sono, tab_bem_estar = st.tabs(
         [
@@ -884,10 +934,9 @@ def main():
         with st.container(border=True):
             section_title("Distribuição dos participantes por intensidade de uso")
             chart_caption(
-                "Mostra como a amostra se distribui entre diferentes níveis "
-                "de tempo diário nas redes sociais."
+                "Mostra a participação de cada nível de uso no total da amostra."
             )
-            plot(usage_profile_bar)
+            plot(usage_profile_donut)
 
         if age_bar is not None and fomo_bar is not None:
             col_perfil_1, col_perfil_2 = st.columns(2, gap="large")
@@ -1023,7 +1072,7 @@ def main():
             "relacionam dentro da amostra analisada."
         )
 
-        if profile_bar is not None and sleep_bar is not None:
+        if profile_bar is not None and sleep_lollipop is not None:
             col_bem_1, col_bem_2 = st.columns([1.25, 1], gap="large")
 
             with col_bem_1:
@@ -1042,9 +1091,9 @@ def main():
                 with st.container(border=True):
                     section_title("Qualidade do sono por nível de FOMO")
                     chart_caption(
-                        "Qualidade média do sono entre os diferentes níveis de FOMO."
+                        "Comparação da qualidade média do sono entre os diferentes níveis de FOMO."
                     )
-                    plot(sleep_bar)
+                    plot(sleep_lollipop)
         else:
             st.info("Não há dados suficientes para exibir as análises de FOMO.")
 
