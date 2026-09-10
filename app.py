@@ -326,6 +326,67 @@ def build_age_charts(df):
 
     return age_bar, fomo_bar
 
+def build_dependency_charts(df):
+    """Par de gráficos: perfil de comportamento compulsivo (uso noturno,
+    doomscrolling e dificuldade de foco) e qualidade do sono, comparando
+    diferentes níveis de FOMO. Complementa a pergunta de doomscrolling/FOMO,
+    não conta como uma pergunta nova."""
+    dep_df = df.dropna(subset=["Nível de FOMO"]).copy()
+    if dep_df.empty:
+        return None, None
+
+    dep_df["Doom_num"] = dep_df[DOOM].map(NIGHT_MAP)
+
+    profile = (
+        dep_df.groupby("Nível de FOMO", observed=True)[[NIGHT, "Doom_num", FOCUS]]
+        .mean()
+        .reindex(FOMO_ORDER)
+    )
+    profile["Uso noturno (0-1)"] = profile[NIGHT] / 4
+    profile["Doomscrolling (0-1)"] = profile["Doom_num"] / 4
+    profile["Dificuldade de foco (0-1)"] = profile[FOCUS] / 3
+
+    profile_long = (
+        profile[["Uso noturno (0-1)", "Doomscrolling (0-1)", "Dificuldade de foco (0-1)"]]
+        .reset_index()
+        .melt(id_vars="Nível de FOMO", var_name="Indicador", value_name="Intensidade média")
+    )
+
+    profile_bar = px.bar(
+        profile_long,
+        x="Nível de FOMO",
+        y="Intensidade média",
+        color="Indicador",
+        barmode="group",
+        category_orders={"Nível de FOMO": FOMO_ORDER},
+        color_discrete_sequence=["#666666", "#FFAD66", "#FF3300"],
+    )
+    style_chart(profile_bar, [0, 1])
+    profile_bar.update_layout(showlegend=True)  # aqui a legenda ajuda a distinguir os 3 indicadores
+
+    sleep_by_fomo = (
+        dep_df.groupby("Nível de FOMO", observed=True)[SLEEP]
+        .mean()
+        .reindex(FOMO_ORDER)
+        .reset_index(name="Qualidade média do sono")
+    )
+    min_val = sleep_by_fomo["Qualidade média do sono"].min()
+    colors = [
+        "#FF3300" if v == min_val else "#FFAD66"
+        for v in sleep_by_fomo["Qualidade média do sono"]
+    ]
+
+    sleep_bar = px.bar(
+        sleep_by_fomo,
+        x="Nível de FOMO",
+        y="Qualidade média do sono",
+        text_auto=".2f",
+    )
+    sleep_bar.update_traces(marker_color=colors, width=0.55)
+    style_chart(sleep_bar, [0, 5])
+
+    return profile_bar, sleep_bar
+
 
 # ==========================================
 # INTERFACE
@@ -382,6 +443,7 @@ def main():
 
     scatter, box, focus_bar, heatmap, corr = build_charts(filtered)
     age_bar, fomo_bar = build_age_charts(filtered)
+    profile_bar, sleep_bar = build_dependency_charts(filtered)
 
     with st.container(border=True):
         question(
@@ -429,6 +491,29 @@ def main():
             "de participantes naquela combinação. Tons de roxo mais "
             "escuros indicam maior concentração de participantes."
         )
+
+        if profile_bar is not None:
+            st.divider()
+            st.caption(
+                "Aprofundando: níveis maiores de FOMO estão associados a outros comportamentos e à qualidade do sono?"
+            )
+
+            col_x, col_y = st.columns(2)
+
+            with col_x:
+                st.caption("Comportamentos relacionados ao uso de redes sociais por nível de FOMO")
+                st.plotly_chart(profile_bar, use_container_width=True)
+
+            with col_y:
+                st.caption("Qualidade média do sono por nível de FOMO")
+                st.plotly_chart(sleep_bar, use_container_width=True)
+
+            st.info(
+                "**Como comparar:** à esquerda, cada indicador é normalizado "
+                "de 0 a 1 — quanto mais alta a barra, mais intenso o "
+                "comportamento naquele grupo de FOMO. À direita, a barra em "
+                "vermelho marca o grupo com pior sono médio."
+            )
 
     if age_bar is not None:
         with st.container(border=True):
