@@ -37,4 +37,6 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-> Se o projeto estiver em outro nome de arquivo principal, substitua `app.py` pelo nome correto do script.
+### Link do Dataset (Source)
+
+https://www.kaggle.com/datasets/manaswinsripatnala/social-media-dopamine-and-productivity-dataset/data
