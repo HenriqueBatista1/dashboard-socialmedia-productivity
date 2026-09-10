@@ -101,7 +101,6 @@ def prepare_dataframe(df: pd.DataFrame):
         include_lowest=True,
     )
 
-    # Criação de variável para destaque pré-atentivo no Boxplot
     cleaned["Destaque"] = cleaned["Uso noturno"].apply(lambda x: "Foco" if x == "Diariamente" else "Neutro")
 
     return cleaned, usage_col, productivity_col, sleep_col
@@ -113,39 +112,40 @@ def prepare_dataframe(df: pd.DataFrame):
 def build_charts(df: pd.DataFrame, usage_col: str, productivity_col: str, sleep_col: str):
     corr = df[[usage_col, productivity_col]].corr().iloc[0, 1]
 
-    # SCATTER PLOT - Destaque Pré-Atentivo na Linha de Tendência
+    # SCATTER PLOT
     scatter = px.scatter(
         df, x=usage_col, y=productivity_col, trendline="ols",
-        opacity=0.4, 
-        color_discrete_sequence=["#A9A9A9"], # Fundo neutro (Chunking/Figura-fundo)
+        opacity=0.5, 
+        color_discrete_sequence=["#666666"], 
         labels={usage_col: "Uso diário (horas)", productivity_col: "Produtividade (%)"}
     )
     
-    # Destacando a resposta central com cor quente
     if len(scatter.data) > 1:
         scatter.data[1].line.color = "#FF3300" 
         scatter.data[1].line.width = 4
 
     scatter.update_layout(
-        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-        xaxis=dict(showgrid=False, title_font=dict(size=14)),
-        yaxis=dict(showgrid=True, gridcolor="#E5E5E5", title_font=dict(size=14)),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="#F8F9FA", # Cria um contraste elegante com o branco do container
+        font=dict(color="#333333", size=12),
+        xaxis=dict(showgrid=False, title_font=dict(color="#333333"), tickfont=dict(color="#333333"), fixedrange=False),
+        yaxis=dict(showgrid=True, gridcolor="#DDDDDD", title_font=dict(color="#333333"), tickfont=dict(color="#333333"), fixedrange=False),
         margin=dict(l=0, r=0, t=30, b=0)
     )
 
-    # BOX PLOT - Destaque Pré-Atentivo na categoria mais extrema
+    # BOX PLOT
     box = px.box(
         df, x="Uso noturno", y=sleep_col, color="Destaque",
-        color_discrete_map={"Foco": "#FF3300", "Neutro": "#A9A9A9"},
+        color_discrete_map={"Foco": "#FF3300", "Neutro": "#666666"},
         category_orders={"Uso noturno": ["Nunca", "Raramente", "Às vezes", "Frequentemente", "Diariamente"]},
         labels={"Uso noturno": "Frequência de uso noturno", sleep_col: "Qualidade do sono (1-5)"}
     )
     
     box.update_layout(
         showlegend=False,
-        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-        xaxis=dict(showgrid=False, title_font=dict(size=14)),
-        yaxis=dict(showgrid=True, gridcolor="#E5E5E5", title_font=dict(size=14)),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="#F8F9FA", # Cria um contraste elegante com o branco do container
+        font=dict(color="#333333", size=12),
+        xaxis=dict(showgrid=False, title_font=dict(color="#333333"), tickfont=dict(color="#333333"), fixedrange=False),
+        yaxis=dict(showgrid=True, gridcolor="#DDDDDD", title_font=dict(color="#333333"), tickfont=dict(color="#333333"), fixedrange=False),
         margin=dict(l=0, r=0, t=30, b=0)
     )
 
@@ -168,7 +168,6 @@ def main():
         st.error("Falha ao processar colunas.")
         return
 
-    # MANTRA: ZOOM & FILTER (Painel Lateral)
     st.sidebar.header("🔍 Filtros de Análise")
     st.sidebar.markdown("*(Zoom/Filter)*")
     
@@ -187,7 +186,6 @@ def main():
     st.title("📊 Dashboard: Mídias Sociais, Dopamina e Produtividade")
     st.caption("Análise do impacto do uso de redes sociais no foco e produtividade (Dados autorrelatados).")
 
-    # MANTRA: OVERVIEW (Visão Geral - Aplicando Gestalt de Fechamento)
     with st.container(border=True):
         st.subheader("Visão Geral da Amostra Filtrada")
         c1, c2, c3 = st.columns(3)
@@ -198,23 +196,25 @@ def main():
     if len(df_filtrado) > 5:
         scatter, box, corr = build_charts(df_filtrado, usage_col, productivity_col, sleep_col)
         
-        # PERGUNTA CENTRAL (Gestalt: Proximidade e Fechamento)
+    # PERGUNTA CENTRAL (Limpa, direta e com atributo pré-atentivo de cor)
         with st.container(border=True):
             st.markdown(
                 """
-                <h3 style='color: #FF3300; margin-bottom: 0px;'>Pergunta Central</h3>
-                <p style='font-size: 1.1em; font-weight: bold;'>Existe associação entre o tempo de uso diário de redes sociais e a queda na taxa de produtividade autorrelatada?</p>
+                <p style='color: #FF3300; font-size: 1.2em; font-weight: bold; margin-bottom: 10px;'>
+                Existe associação entre o tempo de uso diário de redes sociais e a queda na taxa de produtividade autorrelatada?
+                </p>
                 """, unsafe_allow_html=True
             )
             st.plotly_chart(scatter, use_container_width=True)
             st.info(f"**Correlação de Pearson:** {corr:.2f} *(Valores negativos indicam queda de produtividade conforme o uso aumenta)*")
 
-        # PERGUNTA SECUNDÁRIA
+        # SEGUNDA PERGUNTA
         with st.container(border=True):
             st.markdown(
                 """
-                <h3 style='margin-bottom: 0px;'>Segunda Pergunta Principal</h3>
-                <p style='font-size: 1.1em;'>O hábito de uso de mídias sociais no período noturno afeta diretamente a qualidade do sono percebida?</p>
+                <p style='font-size: 1.2em; font-weight: bold; margin-bottom: 10px;'>
+                O hábito de uso de mídias sociais no período noturno afeta diretamente a qualidade do sono percebida?
+                </p>
                 """, unsafe_allow_html=True
             )
             st.plotly_chart(box, use_container_width=True)
@@ -222,7 +222,6 @@ def main():
     else:
         st.warning("Dados insuficientes para os filtros selecionados.")
 
-    # MANTRA: DETAILS ON DEMAND (Detalhes sob Demanda)
     with st.expander("Ver Dados Brutos (Details on Demand)"):
         st.dataframe(df_filtrado.drop(columns=["Destaque"]), use_container_width=True)
 
