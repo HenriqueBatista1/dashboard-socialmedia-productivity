@@ -840,7 +840,10 @@ def main():
         st.session_state.usage_max_input = max_use
 
     def sync_from_slider():
-        lower, upper = st.session_state.usage_range
+        if "usage_range" in st.session_state:
+            lower, upper = st.session_state.usage_range
+        else:
+            lower, upper = 0.5, 9.0  # valores padrão iniciais
         st.session_state.usage_min_input = float(lower)
         st.session_state.usage_max_input = float(upper)
 
