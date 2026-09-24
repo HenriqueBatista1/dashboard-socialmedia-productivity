@@ -23,9 +23,28 @@ AGE = "age"
 
 REQUIRED = [USAGE, PRODUCTIVITY, NIGHT, SLEEP, FOCUS, DOOM, FOMO]
 
-SLEEP_MAP = {"Very poor": 1, "Poor": 2, "Fair": 3, "Good": 4, "Very good": 5}
-NIGHT_MAP = {"Never": 0, "Rarely": 1, "Sometimes": 2, "Often": 3, "Daily": 4}
-FOCUS_MAP = {"Never": 0, "Rarely": 1, "Sometimes": 2, "Yes": 3}
+SLEEP_MAP = {
+    "Very poor": 1,
+    "Poor": 2,
+    "Fair": 3,
+    "Good": 4,
+    "Very good": 5,
+}
+
+NIGHT_MAP = {
+    "Never": 0,
+    "Rarely": 1,
+    "Sometimes": 2,
+    "Often": 3,
+    "Daily": 4,
+}
+
+FOCUS_MAP = {
+    "Never": 0,
+    "Rarely": 1,
+    "Sometimes": 2,
+    "Yes": 3,
+}
 
 DOOM_MAP = {
     "Never": "Nunca",
@@ -35,12 +54,37 @@ DOOM_MAP = {
     "Daily": "Diariamente",
 }
 
-USAGE_ORDER = ["Baixo uso", "Uso moderado", "Alto uso", "Uso muito alto"]
-NIGHT_ORDER = ["Nunca", "Raramente", "Às vezes", "Frequentemente", "Diariamente"]
-FOMO_ORDER = ["Baixo (1–3)", "Médio (4–7)", "Alto (8–10)"]
-AGE_ORDER = ["Até 24", "25–34", "35–44", "45–54", "55+"]
+USAGE_ORDER = [
+    "Baixo uso",
+    "Uso moderado",
+    "Alto uso",
+    "Uso muito alto",
+]
 
-# Identidade visual: uma cor principal e tons auxiliares apenas quando necessário.
+NIGHT_ORDER = [
+    "Nunca",
+    "Raramente",
+    "Às vezes",
+    "Frequentemente",
+    "Diariamente",
+]
+
+FOMO_ORDER = [
+    "Baixo (1–3)",
+    "Médio (4–7)",
+    "Alto (8–10)",
+]
+
+AGE_ORDER = [
+    "Até 24",
+    "25–34",
+    "35–44",
+    "45–54",
+    "55+",
+]
+
+
+# Identidade visual
 PRIMARY = "#0F6B6D"
 PRIMARY_DARK = "#0B4F52"
 PRIMARY_LIGHT = "#69A7A8"
@@ -53,7 +97,6 @@ NEUTRAL = "#667085"
 NEUTRAL_LIGHT = "#D9DDE3"
 BACKGROUND = "#F8F9FA"
 TEXT = "#202124"
-GRID = "#E2E2E2"
 
 PLOT_CONFIG = {
     "displaylogo": False,
@@ -85,17 +128,28 @@ def find_files(root):
         for p in root.rglob("*")
         if p.is_file()
         and p.suffix.lower() in {".csv", ".xlsx", ".xls"}
-        and not any(x in {".venv", ".git", "__pycache__"} for x in p.parts)
+        and not any(
+            x in {".venv", ".git", "__pycache__"}
+            for x in p.parts
+        )
     )
 
 
 def read_file(path):
-    return pd.read_csv(path) if path.suffix.lower() == ".csv" else pd.read_excel(path)
+    return (
+        pd.read_csv(path)
+        if path.suffix.lower() == ".csv"
+        else pd.read_excel(path)
+    )
 
 
 @st.cache_data
 def load_dataset():
-    folders = [Path.cwd(), Path.cwd() / "data", Path.cwd() / "datasets"]
+    folders = [
+        Path.cwd(),
+        Path.cwd() / "data",
+        Path.cwd() / "datasets",
+    ]
 
     try:
         folders.append(Path(kagglehub.dataset_download(DATASET_SLUG)))
@@ -106,8 +160,12 @@ def load_dataset():
         for path in find_files(folder):
             try:
                 df = read_file(path)
-                if not df.empty and all(col in df.columns for col in REQUIRED):
+
+                if not df.empty and all(
+                    col in df.columns for col in REQUIRED
+                ):
                     return df
+
             except Exception:
                 continue
 
@@ -122,18 +180,35 @@ def prepare_dataframe(df):
     if df is None or df.empty:
         return None
 
-    missing = [c for c in REQUIRED if c not in df.columns]
+    missing = [
+        c for c in REQUIRED
+        if c not in df.columns
+    ]
+
     if missing:
-        friendly_missing = [DISPLAY_LABELS.get(c, c) for c in missing]
-        st.error("Colunas ausentes: " + ", ".join(friendly_missing))
+        friendly_missing = [
+            DISPLAY_LABELS.get(c, c)
+            for c in missing
+        ]
+
+        st.error(
+            "Colunas ausentes: "
+            + ", ".join(friendly_missing)
+        )
+
         return None
 
     has_age = AGE in df.columns
+
     cols = REQUIRED + ([AGE] if has_age else [])
+
     df = df[cols].copy()
 
     for col in [USAGE, PRODUCTIVITY, FOMO]:
-        df[col] = pd.to_numeric(df[col], errors="coerce")
+        df[col] = pd.to_numeric(
+            df[col],
+            errors="coerce",
+        )
 
     df[SLEEP] = df[SLEEP].map(SLEEP_MAP)
     df[NIGHT] = df[NIGHT].map(NIGHT_MAP)
@@ -149,7 +224,13 @@ def prepare_dataframe(df):
 
     df["Intensidade de uso"] = pd.cut(
         df[USAGE],
-        [float("-inf"), 2, 4, 6, float("inf")],
+        [
+            float("-inf"),
+            2,
+            4,
+            6,
+            float("inf"),
+        ],
         labels=USAGE_ORDER,
     )
 
@@ -161,7 +242,11 @@ def prepare_dataframe(df):
     )
 
     if has_age:
-        df[AGE] = pd.to_numeric(df[AGE], errors="coerce")
+        df[AGE] = pd.to_numeric(
+            df[AGE],
+            errors="coerce",
+        )
+
         df["Faixa etária"] = pd.cut(
             df[AGE],
             [0, 24, 34, 44, 54, 150],
@@ -175,25 +260,45 @@ def prepare_dataframe(df):
 # ESTILO
 # ==========================================
 
-def style_chart(fig, y_range=None, showlegend=False, height=340):
+def style_chart(
+    fig,
+    y_range=None,
+    showlegend=False,
+    height=340,
+):
+
     fig.update_layout(
         showlegend=showlegend,
         plot_bgcolor=BACKGROUND,
         paper_bgcolor=BACKGROUND,
-        font=dict(color=TEXT, size=12),
+        font=dict(
+            color=TEXT,
+            size=12,
+        ),
         height=height,
-        margin=dict(l=8, r=8, t=20, b=8),
+        margin=dict(
+            l=8,
+            r=8,
+            t=20,
+            b=8,
+        ),
         hoverlabel=dict(
             bgcolor="white",
             font_size=12,
             font_color=TEXT,
         ),
-        xaxis=dict(showgrid=False, title_font=dict(color=TEXT)),
+        xaxis=dict(
+            showgrid=False,
+            title_font=dict(
+                color=TEXT,
+            ),
+        ),
         yaxis=dict(
             showgrid=False,
-            gridcolor=GRID,
             range=y_range,
-            title_font=dict(color=TEXT),
+            title_font=dict(
+                color=TEXT,
+            ),
         ),
         legend=dict(
             title_text="",
@@ -204,6 +309,7 @@ def style_chart(fig, y_range=None, showlegend=False, height=340):
             x=0,
         ),
     )
+
     return fig
 
 
@@ -246,7 +352,11 @@ def page_description(text):
 
 
 def plot(fig):
-    st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+        config=PLOT_CONFIG,
+    )
 
 
 # ==========================================
@@ -254,7 +364,14 @@ def plot(fig):
 # ==========================================
 
 def build_charts(df):
-    corr = df[[USAGE, PRODUCTIVITY]].corr().iloc[0, 1]
+
+    corr = df[
+        [USAGE, PRODUCTIVITY]
+    ].corr().iloc[0, 1]
+
+    # ------------------------------------------
+    # 1) Uso diário x produtividade
+    # ------------------------------------------
 
     scatter = px.scatter(
         df,
@@ -267,7 +384,10 @@ def build_charts(df):
     )
 
     scatter.data[0].update(
-        marker=dict(size=8, color=PRIMARY),
+        marker=dict(
+            size=8,
+            color=PRIMARY,
+        ),
         hovertemplate=(
             "Uso diário: %{x:.1f} h"
             "<br>Produtividade: %{y:.1f}%"
@@ -277,7 +397,10 @@ def build_charts(df):
 
     if len(scatter.data) > 1:
         scatter.data[1].update(
-            line=dict(color=PRIMARY_DARK, width=3),
+            line=dict(
+                color=PRIMARY_DARK,
+                width=3,
+            ),
             hovertemplate=(
                 "Linha de tendência"
                 "<br>Uso diário: %{x:.1f} h"
@@ -288,7 +411,11 @@ def build_charts(df):
 
     style_chart(scatter)
 
-    # Heatmap de uso noturno x qualidade do sono.
+    # ------------------------------------------
+    # 2) Uso noturno x qualidade do sono
+    #    HEATMAP
+    # ------------------------------------------
+
     sleep_heatmap_data = pd.crosstab(
         df["Uso noturno"],
         df[SLEEP],
@@ -297,14 +424,6 @@ def build_charts(df):
         columns=[1, 2, 3, 4, 5],
         fill_value=0,
     )
-
-    sleep_heatmap_data.columns = [
-        "Muito ruim",
-        "Ruim",
-        "Regular",
-        "Boa",
-        "Muito boa",
-    ]
 
     sleep_heatmap = px.imshow(
         sleep_heatmap_data,
@@ -318,7 +437,7 @@ def build_charts(df):
             [1.00, PRIMARY_DARK],
         ],
         labels={
-            "x": "Qualidade do sono",
+            "x": "Qualidade do sono (1–5)",
             "y": "Frequência de uso noturno",
             "color": "Participantes",
         },
@@ -334,16 +453,27 @@ def build_charts(df):
     )
 
     sleep_heatmap.update_coloraxes(
-        colorbar=dict(title="Participantes"),
+        colorbar=dict(
+            title="Participantes",
+        ),
     )
 
     style_chart(sleep_heatmap)
 
+    # ------------------------------------------
+    # 3) Intensidade de uso x dificuldade de foco
+    # ------------------------------------------
+
     focus_df = (
-        df.groupby("Intensidade de uso", observed=True)[FOCUS]
+        df.groupby(
+            "Intensidade de uso",
+            observed=True,
+        )[FOCUS]
         .mean()
         .reindex(USAGE_ORDER)
-        .reset_index(name="Dificuldade média de foco")
+        .reset_index(
+            name="Dificuldade média de foco"
+        )
     )
 
     focus_bar = px.bar(
@@ -351,12 +481,16 @@ def build_charts(df):
         x="Intensidade de uso",
         y="Dificuldade média de foco",
         text_auto=".2f",
-        category_orders={"Intensidade de uso": USAGE_ORDER},
+        category_orders={
+            "Intensidade de uso": USAGE_ORDER
+        },
         labels={
             "Intensidade de uso": "Intensidade de uso",
-            "Dificuldade média de foco": "Dificuldade média de foco (0–3)",
+            "Dificuldade média de foco":
+                "Dificuldade média de foco (0–3)",
         },
     )
+
     focus_bar.update_traces(
         marker_color=PRIMARY,
         width=0.55,
@@ -366,13 +500,28 @@ def build_charts(df):
             "<extra></extra>"
         ),
     )
-    style_chart(focus_bar, [0, 3])
 
-    heatmap_df = df[[DOOM, "Nível de FOMO"]].copy()
-    heatmap_df["Frequência de doomscrolling"] = heatmap_df[DOOM].replace(DOOM_MAP)
+    style_chart(
+        focus_bar,
+        [0, 3],
+    )
+
+    # ------------------------------------------
+    # 4) Doomscrolling x FOMO
+    # ------------------------------------------
+
+    heatmap_df = df[
+        [DOOM, "Nível de FOMO"]
+    ].copy()
+
+    heatmap_df[
+        "Frequência de doomscrolling"
+    ] = heatmap_df[DOOM].replace(DOOM_MAP)
 
     heatmap_data = pd.crosstab(
-        heatmap_df["Frequência de doomscrolling"],
+        heatmap_df[
+            "Frequência de doomscrolling"
+        ],
         heatmap_df["Nível de FOMO"],
     ).reindex(
         index=NIGHT_ORDER,
@@ -397,6 +546,7 @@ def build_charts(df):
             "color": "Participantes",
         },
     )
+
     heatmap.update_traces(
         hovertemplate=(
             "FOMO: %{x}"
@@ -405,34 +555,61 @@ def build_charts(df):
             "<extra></extra>"
         )
     )
+
     heatmap.update_coloraxes(
-        colorbar=dict(title="Participantes"),
+        colorbar=dict(
+            title="Participantes"
+        ),
     )
+
     style_chart(heatmap)
 
-    return scatter, sleep_heatmap, focus_bar, heatmap, corr
+    return (
+        scatter,
+        sleep_heatmap,
+        focus_bar,
+        heatmap,
+        corr,
+    )
 
 
 def build_age_charts(df):
-    if AGE not in df.columns or "Faixa etária" not in df.columns:
+
+    if (
+        AGE not in df.columns
+        or "Faixa etária" not in df.columns
+    ):
         return None, None
 
-    age_df = df.dropna(subset=["Faixa etária"])
+    age_df = df.dropna(
+        subset=["Faixa etária"]
+    )
+
     if age_df.empty:
         return None, None
 
     usage_by_age = (
-        age_df.groupby("Faixa etária", observed=True)[USAGE]
+        age_df.groupby(
+            "Faixa etária",
+            observed=True,
+        )[USAGE]
         .mean()
         .reindex(AGE_ORDER)
-        .reset_index(name="Uso médio diário (h)")
+        .reset_index(
+            name="Uso médio diário (h)"
+        )
     )
 
     fomo_by_age = (
-        age_df.groupby("Faixa etária", observed=True)[FOMO]
+        age_df.groupby(
+            "Faixa etária",
+            observed=True,
+        )[FOMO]
         .mean()
         .reindex(AGE_ORDER)
-        .reset_index(name="FOMO médio")
+        .reset_index(
+            name="FOMO médio"
+        )
     )
 
     age_bar = px.line(
@@ -441,14 +618,23 @@ def build_age_charts(df):
         y="Uso médio diário (h)",
         markers=True,
         text="Uso médio diário (h)",
-        category_orders={"Faixa etária": AGE_ORDER},
+        category_orders={
+            "Faixa etária": AGE_ORDER
+        },
     )
+
     age_bar.update_traces(
-        line=dict(color=PRIMARY, width=3),
+        line=dict(
+            color=PRIMARY,
+            width=3,
+        ),
         marker=dict(
             color=PRIMARY_DARK,
             size=10,
-            line=dict(color="white", width=1.5),
+            line=dict(
+                color="white",
+                width=1.5,
+            ),
         ),
         texttemplate="%{text:.1f} h",
         textposition="top center",
@@ -458,6 +644,7 @@ def build_age_charts(df):
             "<extra></extra>"
         ),
     )
+
     style_chart(age_bar)
 
     fomo_bar = px.bar(
@@ -465,8 +652,11 @@ def build_age_charts(df):
         x="Faixa etária",
         y="FOMO médio",
         text_auto=".1f",
-        category_orders={"Faixa etária": AGE_ORDER},
+        category_orders={
+            "Faixa etária": AGE_ORDER
+        },
     )
+
     fomo_bar.update_traces(
         marker_color=PRIMARY,
         width=0.55,
@@ -476,30 +666,59 @@ def build_age_charts(df):
             "<extra></extra>"
         ),
     )
-    style_chart(fomo_bar, [0, 10])
+
+    style_chart(
+        fomo_bar,
+        [0, 10],
+    )
 
     return age_bar, fomo_bar
 
 
 def build_dependency_charts(df):
-    dep_df = df.dropna(subset=["Nível de FOMO"]).copy()
+
+    dep_df = df.dropna(
+        subset=["Nível de FOMO"]
+    ).copy()
+
     if dep_df.empty:
         return None, None
 
-    dep_df["Doom_num"] = dep_df[DOOM].map(NIGHT_MAP)
+    dep_df["Doom_num"] = dep_df[
+        DOOM
+    ].map(NIGHT_MAP)
 
     profile = (
-        dep_df.groupby("Nível de FOMO", observed=True)[[NIGHT, "Doom_num", FOCUS]]
+        dep_df.groupby(
+            "Nível de FOMO",
+            observed=True,
+        )[
+            [NIGHT, "Doom_num", FOCUS]
+        ]
         .mean()
         .reindex(FOMO_ORDER)
     )
 
-    profile["Uso noturno"] = profile[NIGHT] / 4
-    profile["Doomscrolling"] = profile["Doom_num"] / 4
-    profile["Dificuldade de foco"] = profile[FOCUS] / 3
+    profile["Uso noturno"] = (
+        profile[NIGHT] / 4
+    )
+
+    profile["Doomscrolling"] = (
+        profile["Doom_num"] / 4
+    )
+
+    profile["Dificuldade de foco"] = (
+        profile[FOCUS] / 3
+    )
 
     profile_long = (
-        profile[["Uso noturno", "Doomscrolling", "Dificuldade de foco"]]
+        profile[
+            [
+                "Uso noturno",
+                "Doomscrolling",
+                "Dificuldade de foco",
+            ]
+        ]
         .reset_index()
         .melt(
             id_vars="Nível de FOMO",
@@ -516,7 +735,11 @@ def build_dependency_charts(df):
         barmode="group",
         category_orders={
             "Nível de FOMO": FOMO_ORDER,
-            "Indicador": ["Uso noturno", "Doomscrolling", "Dificuldade de foco"],
+            "Indicador": [
+                "Uso noturno",
+                "Doomscrolling",
+                "Dificuldade de foco",
+            ],
         },
         color_discrete_map={
             "Uso noturno": PRIMARY_DARK,
@@ -525,9 +748,11 @@ def build_dependency_charts(df):
         },
         labels={
             "Nível de FOMO": "Nível de FOMO",
-            "Intensidade média": "Intensidade média normalizada",
+            "Intensidade média":
+                "Intensidade média normalizada",
         },
     )
+
     profile_bar.update_traces(
         hovertemplate=(
             "Nível de FOMO: %{x}"
@@ -535,13 +760,23 @@ def build_dependency_charts(df):
             "<extra></extra>"
         )
     )
-    style_chart(profile_bar, [0, 1], showlegend=True)
+
+    style_chart(
+        profile_bar,
+        [0, 1],
+        showlegend=True,
+    )
 
     sleep_by_fomo = (
-        dep_df.groupby("Nível de FOMO", observed=True)[SLEEP]
+        dep_df.groupby(
+            "Nível de FOMO",
+            observed=True,
+        )[SLEEP]
         .mean()
         .reindex(FOMO_ORDER)
-        .reset_index(name="Qualidade média do sono")
+        .reset_index(
+            name="Qualidade média do sono"
+        )
     )
 
     sleep_lollipop = px.scatter(
@@ -549,14 +784,19 @@ def build_dependency_charts(df):
         x="Nível de FOMO",
         y="Qualidade média do sono",
         text="Qualidade média do sono",
-        category_orders={"Nível de FOMO": FOMO_ORDER},
+        category_orders={
+            "Nível de FOMO": FOMO_ORDER
+        },
     )
 
     sleep_lollipop.update_traces(
         marker=dict(
             color=PRIMARY_DARK,
             size=14,
-            line=dict(color="white", width=1.5),
+            line=dict(
+                color="white",
+                width=1.5,
+            ),
         ),
         texttemplate="%{text:.2f}",
         textposition="top center",
@@ -568,38 +808,65 @@ def build_dependency_charts(df):
     )
 
     for _, row in sleep_by_fomo.iterrows():
+
         sleep_lollipop.add_shape(
             type="line",
             x0=row["Nível de FOMO"],
             x1=row["Nível de FOMO"],
             y0=0,
             y1=row["Qualidade média do sono"],
-            line=dict(color=PRIMARY_LIGHT, width=5),
+            line=dict(
+                color=PRIMARY_LIGHT,
+                width=5,
+            ),
             layer="below",
         )
 
-    style_chart(sleep_lollipop, [0, 5])
+    style_chart(
+        sleep_lollipop,
+        [0, 5],
+    )
 
     return profile_bar, sleep_lollipop
 
 
 def build_additional_charts(df):
+
     """Duas análises adicionais que complementam os temas já existentes."""
 
     # 1) Perfil da amostra por intensidade de uso.
+
     usage_profile = (
         df["Intensidade de uso"]
         .value_counts(sort=False)
-        .reindex(USAGE_ORDER, fill_value=0)
-        .rename_axis("Intensidade de uso")
-        .reset_index(name="Participantes")
+        .reindex(
+            USAGE_ORDER,
+            fill_value=0,
+        )
+        .rename_axis(
+            "Intensidade de uso"
+        )
+        .reset_index(
+            name="Participantes"
+        )
     )
 
-    total = usage_profile["Participantes"].sum()
+    total = usage_profile[
+        "Participantes"
+    ].sum()
+
     usage_profile["Percentual"] = (
-        usage_profile["Participantes"] / total * 100 if total else 0
+        usage_profile["Participantes"]
+        / total
+        * 100
+        if total
+        else 0
     )
-    usage_profile["Rótulo"] = usage_profile["Percentual"].map(lambda v: f"{v:.1f}%")
+
+    usage_profile["Rótulo"] = (
+        usage_profile["Percentual"]
+        .map(lambda v: f"{v:.1f}%")
+    )
 
     usage_colors = {
         "Baixo uso": "#DDEEEE",
@@ -613,7 +880,9 @@ def build_additional_charts(df):
         names="Intensidade de uso",
         values="Participantes",
         hole=0.56,
-        category_orders={"Intensidade de uso": USAGE_ORDER},
+        category_orders={
+            "Intensidade de uso": USAGE_ORDER
+        },
         color="Intensidade de uso",
         color_discrete_map=usage_colors,
     )
@@ -622,7 +891,12 @@ def build_additional_charts(df):
         sort=False,
         textinfo="percent+label",
         textposition="outside",
-        marker=dict(line=dict(color="white", width=2)),
+        marker=dict(
+            line=dict(
+                color="white",
+                width=2,
+            )
+        ),
         hovertemplate=(
             "<b>%{label}</b>"
             "<br>Participantes: %{value}"
@@ -635,28 +909,50 @@ def build_additional_charts(df):
         showlegend=False,
         plot_bgcolor=BACKGROUND,
         paper_bgcolor=BACKGROUND,
-        font=dict(color=TEXT, size=12),
+        font=dict(
+            color=TEXT,
+            size=12,
+        ),
         height=350,
-        margin=dict(l=30, r=30, t=20, b=20),
+        margin=dict(
+            l=30,
+            r=30,
+            t=20,
+            b=20,
+        ),
         annotations=[
             dict(
-                text=f"<b>{int(total)}</b><br>participantes",
+                text=(
+                    f"<b>{int(total)}</b>"
+                    "<br>participantes"
+                ),
                 x=0.5,
                 y=0.5,
                 showarrow=False,
-                font=dict(size=17, color=TEXT),
+                font=dict(
+                    size=17,
+                    color=TEXT,
+                ),
                 align="center",
             )
         ],
     )
 
-    # 2) Relação ainda não exibida: produtividade média por nível de FOMO.
+    # 2) Produtividade média por nível de FOMO.
+
     productivity_fomo = (
-        df.dropna(subset=["Nível de FOMO"])
-        .groupby("Nível de FOMO", observed=True)[PRODUCTIVITY]
+        df.dropna(
+            subset=["Nível de FOMO"]
+        )
+        .groupby(
+            "Nível de FOMO",
+            observed=True,
+        )[PRODUCTIVITY]
         .mean()
         .reindex(FOMO_ORDER)
-        .reset_index(name="Produtividade média")
+        .reset_index(
+            name="Produtividade média"
+        )
     )
 
     productivity_fomo_bar = px.bar(
@@ -664,12 +960,16 @@ def build_additional_charts(df):
         x="Nível de FOMO",
         y="Produtividade média",
         text_auto=".1f",
-        category_orders={"Nível de FOMO": FOMO_ORDER},
+        category_orders={
+            "Nível de FOMO": FOMO_ORDER
+        },
         labels={
             "Nível de FOMO": "Nível de FOMO",
-            "Produtividade média": "Produtividade média (%)",
+            "Produtividade média":
+                "Produtividade média (%)",
         },
     )
+
     productivity_fomo_bar.update_traces(
         marker_color=PRIMARY,
         width=0.55,
@@ -679,9 +979,16 @@ def build_additional_charts(df):
             "<extra></extra>"
         ),
     )
-    style_chart(productivity_fomo_bar, height=330)
 
-    return usage_profile_donut, productivity_fomo_bar
+    style_chart(
+        productivity_fomo_bar,
+        height=330,
+    )
+
+    return (
+        usage_profile_donut,
+        productivity_fomo_bar,
+    )
 
 
 # ==========================================
@@ -689,6 +996,7 @@ def build_additional_charts(df):
 # ==========================================
 
 def main():
+
     st.set_page_config(
         page_title="Dashboard Social Media & Produtividade",
         page_icon="📊",
@@ -698,13 +1006,17 @@ def main():
     st.markdown(
         f"""
         <style>
+
             .block-container {{
-                padding-top: 2rem;
+                padding-top: 1.5rem;
                 padding-bottom: 3rem;
             }}
 
-            h1 {{
+            div[data-testid="stHeading"] h1 {{
                 color: {TEXT};
+                font-size: 1.25rem !important;
+                line-height: 1.3;
+                margin: 0 0 0.5rem;
             }}
 
             [data-testid="stMetricValue"] {{
@@ -712,13 +1024,21 @@ def main():
             }}
 
             div[data-testid="stMetric"] {{
-                background-color: white;
-                border: 1px solid #EAEAEA;
-                padding: 0.9rem 1rem;
-                border-radius: 0.75rem;
+                background-color: transparent;
+                border: none;
+                padding: 0 0.25rem;
             }}
 
-            /* Controles de filtro: mesma identidade azul-petróleo */
+            div[data-testid="stMetricLabel"] {{
+                font-size: 0.8rem;
+            }}
+
+            div[data-testid="stMetricValue"] {{
+                font-size: 1.35rem;
+            }}
+
+            /* Controles de filtro */
+
             div[data-testid="stSlider"] [role="slider"] {{
                 background-color: {PRIMARY} !important;
                 border-color: {PRIMARY} !important;
@@ -737,7 +1057,8 @@ def main():
                 box-shadow: 0 0 0 1px {PRIMARY} !important;
             }}
 
-            /* Abas do painel */
+            /* Abas */
+
             button[data-baseweb="tab"] {{
                 font-weight: 600;
             }}
@@ -750,7 +1071,8 @@ def main():
                 background-color: {PRIMARY} !important;
             }}
 
-            /* Slider - reforço da cor principal */
+            /* Slider */
+
             div[data-baseweb="slider"] [role="slider"] {{
                 background-color: {PRIMARY} !important;
                 border-color: {PRIMARY} !important;
@@ -759,11 +1081,9 @@ def main():
             div[data-baseweb="slider"] > div > div {{
                 background-color: {PRIMARY} !important;
             }}
-            /* ==================================================
-               IDENTIDADE DOS COMPONENTES NATIVOS DO STREAMLIT
-               ================================================== */
 
-            /* A versão atual do Streamlit usa --st-primary-color */
+            /* Identidade dos componentes nativos do Streamlit */
+
             :root,
             .stApp,
             [data-testid="stAppViewContainer"],
@@ -772,10 +1092,22 @@ def main():
                 --primary-color: {PRIMARY} !important;
             }}
 
-            /* Abas: selecionada, hover e linha inferior */
+            /* Abas */
+
             .stTabs button[data-baseweb="tab"][aria-selected="true"],
             .stTabs button[data-baseweb="tab"][aria-selected="true"] p {{
                 color: {PRIMARY} !important;
+            }}
+
+            .stTabs button[data-baseweb="tab"][aria-controls$="-tabpanel-0"][aria-selected="true"],
+            .stTabs button[data-baseweb="tab"][aria-controls$="-tabpanel-0"][aria-selected="true"] p {{
+                color: {PRIMARY} !important;
+            }}
+
+            .stTabs div[data-baseweb="tab-list"]:has(
+                button[data-baseweb="tab"][aria-controls$="-tabpanel-0"][aria-selected="true"]
+            ) > div[data-baseweb="tab-highlight"] {{
+                background-color: {PRIMARY} !important;
             }}
 
             .stTabs button[data-baseweb="tab"]:hover,
@@ -787,7 +1119,8 @@ def main():
                 background-color: {PRIMARY} !important;
             }}
 
-            /* Slider: bolinhas, números e cor principal */
+            /* Slider */
+
             .stSlider [role="slider"] {{
                 background-color: {PRIMARY} !important;
                 border-color: {PRIMARY} !important;
@@ -799,7 +1132,6 @@ def main():
                 color: {PRIMARY} !important;
             }}
 
-            /* Em versões que usam BaseWeb diretamente */
             div[data-testid="stSlider"] div[data-baseweb="slider"] {{
                 --st-primary-color: {PRIMARY} !important;
             }}
@@ -810,6 +1142,7 @@ def main():
             }}
 
             /* Campos mínimo/máximo */
+
             div[data-testid="stNumberInput"]:focus-within {{
                 --st-primary-color: {PRIMARY} !important;
             }}
@@ -818,7 +1151,8 @@ def main():
                 border-color: {PRIMARY} !important;
             }}
 
-            /* Botão de consulta / retorno */
+            /* Botão */
+
             button[data-testid="stBaseButton-primary"],
             div.stButton > button[kind="primary"] {{
                 background-color: {PRIMARY} !important;
@@ -838,54 +1172,122 @@ def main():
         unsafe_allow_html=True,
     )
 
-    df = prepare_dataframe(load_dataset())
+    df = prepare_dataframe(
+        load_dataset()
+    )
 
     if df is None:
-        st.error("Dataset não encontrado ou inválido.")
+        st.error(
+            "Dataset não encontrado ou inválido."
+        )
         return
 
-    st.sidebar.header("Filtro de análise")
+    st.sidebar.header(
+        "Filtro de análise"
+    )
 
-    min_use = float(df[USAGE].min())
-    max_use = float(df[USAGE].max())
+    min_use = float(
+        df[USAGE].min()
+    )
+
+    max_use = float(
+        df[USAGE].max()
+    )
 
     # Mantém slider e campos numéricos sincronizados.
+
     if "usage_range" not in st.session_state:
-        st.session_state.usage_range = (min_use, max_use)
+        st.session_state.usage_range = (
+            min_use,
+            max_use,
+        )
+
     if "usage_min_input" not in st.session_state:
         st.session_state.usage_min_input = min_use
+
     if "usage_max_input" not in st.session_state:
         st.session_state.usage_max_input = max_use
 
     def sync_from_slider():
+
         if "usage_range" in st.session_state:
-            lower, upper = st.session_state.usage_range
+            lower, upper = (
+                st.session_state.usage_range
+            )
         else:
             lower, upper = 0.5, 9.0
-        st.session_state.usage_min_input = float(lower)
-        st.session_state.usage_max_input = float(upper)
+
+        st.session_state.usage_min_input = float(
+            lower
+        )
+
+        st.session_state.usage_max_input = float(
+            upper
+        )
 
     def sync_from_min_input():
-        lower = max(min_use, min(float(st.session_state.usage_min_input), max_use))
-        upper = max(min_use, min(float(st.session_state.usage_max_input), max_use))
+
+        lower = max(
+            min_use,
+            min(
+                float(
+                    st.session_state.usage_min_input
+                ),
+                max_use,
+            ),
+        )
+
+        upper = max(
+            min_use,
+            min(
+                float(
+                    st.session_state.usage_max_input
+                ),
+                max_use,
+            ),
+        )
 
         if lower > upper:
             upper = lower
             st.session_state.usage_max_input = upper
 
         st.session_state.usage_min_input = lower
-        st.session_state.usage_range = (lower, upper)
+        st.session_state.usage_range = (
+            lower,
+            upper,
+        )
 
     def sync_from_max_input():
-        lower = max(min_use, min(float(st.session_state.usage_min_input), max_use))
-        upper = max(min_use, min(float(st.session_state.usage_max_input), max_use))
+
+        lower = max(
+            min_use,
+            min(
+                float(
+                    st.session_state.usage_min_input
+                ),
+                max_use,
+            ),
+        )
+
+        upper = max(
+            min_use,
+            min(
+                float(
+                    st.session_state.usage_max_input
+                ),
+                max_use,
+            ),
+        )
 
         if upper < lower:
             lower = upper
             st.session_state.usage_min_input = lower
 
         st.session_state.usage_max_input = upper
-        st.session_state.usage_range = (lower, upper)
+        st.session_state.usage_range = (
+            lower,
+            upper,
+        )
 
     st.sidebar.slider(
         "Horas diárias de uso das redes sociais",
@@ -895,12 +1297,18 @@ def main():
         step=0.1,
         key="usage_range",
         on_change=sync_from_slider,
-        help="Arraste os marcadores ou digite abaixo os valores exatos do intervalo.",
+        help=(
+            "Arraste os marcadores ou digite abaixo "
+            "os valores exatos do intervalo."
+        ),
     )
 
-    input_col1, input_col2 = st.sidebar.columns(2)
+    input_col1, input_col2 = (
+        st.sidebar.columns(2)
+    )
 
     with input_col1:
+
         st.number_input(
             "Mínimo",
             min_value=min_use,
@@ -912,6 +1320,7 @@ def main():
         )
 
     with input_col2:
+
         st.number_input(
             "Máximo",
             min_value=min_use,
@@ -923,14 +1332,21 @@ def main():
         )
 
     filtro = st.session_state.usage_range
-    filtered = df[df[USAGE].between(*filtro)]
+
+    filtered = df[
+        df[USAGE].between(*filtro)
+    ]
 
     # Navegação para consulta dos dados.
+
     if "show_raw_data" not in st.session_state:
         st.session_state.show_raw_data = False
 
     st.sidebar.divider()
-    st.sidebar.subheader("Consulta")
+
+    st.sidebar.subheader(
+        "Consulta"
+    )
 
     sidebar_button_label = (
         "Voltar ao painel"
@@ -941,7 +1357,10 @@ def main():
     sidebar_button_help = (
         "Retorna para as análises do painel."
         if st.session_state.show_raw_data
-        else "Abre a tabela com os dados considerados pelo filtro atual."
+        else (
+            "Abre a tabela com os dados considerados "
+            "pelo filtro atual."
+        )
     )
 
     if st.sidebar.button(
@@ -950,39 +1369,81 @@ def main():
         type="primary",
         help=sidebar_button_help,
     ):
-        st.session_state.show_raw_data = not st.session_state.show_raw_data
+        st.session_state.show_raw_data = (
+            not st.session_state.show_raw_data
+        )
+
         st.rerun()
 
-    st.title("Painel de Mídias Sociais e Produtividade")
-    st.caption(
-        "Análise das relações entre uso de redes sociais, foco, sono, FOMO e produtividade."
+    st.title(
+        "Painel de Mídias Sociais e Produtividade"
     )
 
     with st.container(border=True):
-        section_title("Visão geral da amostra")
 
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Participantes", f"{len(filtered):,}".replace(",", "."))
-        c2.metric("Tempo médio diário", f"{filtered[USAGE].mean():.1f} h")
+        st.markdown(
+            f"""
+            <h3 style="
+                color:{PRIMARY};
+                font-size:1.1rem;
+                font-weight:700;
+                margin:0 0 0.25rem 0;
+                line-height:1.2;
+            ">
+                Visão geral da amostra
+            </h3>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        c1, c2, c3, c4 = st.columns(
+            4,
+            gap="small",
+        )
+
+        c1.metric(
+            "Participantes",
+            f"{len(filtered):,}".replace(
+                ",",
+                ".",
+            ),
+        )
+
+        c2.metric(
+            "Tempo médio diário",
+            f"{filtered[USAGE].mean():.1f} h",
+        )
+
         c3.metric(
             "Produtividade média",
             f"{filtered[PRODUCTIVITY].mean():.1f}%",
         )
+
         c4.metric(
             "FOMO médio",
             f"{filtered[FOMO].mean():.1f}",
         )
 
-    # Tela dedicada de consulta, acessada pelo menu lateral.
+    # Tela dedicada de consulta.
+
     if st.session_state.show_raw_data:
+
         with st.container(border=True):
-            section_title("Consulta dos dados")
-            page_description(
-                "Visualize os registros considerados no intervalo selecionado nos filtros. "
-                "Os nomes das variáveis foram adaptados para facilitar a leitura."
+
+            section_title(
+                "Consulta dos dados"
             )
 
-            display_df = filtered.rename(columns=DISPLAY_LABELS)
+            page_description(
+                "Visualize os registros considerados no "
+                "intervalo selecionado nos filtros. "
+                "Os nomes das variáveis foram adaptados "
+                "para facilitar a leitura."
+            )
+
+            display_df = filtered.rename(
+                columns=DISPLAY_LABELS
+            )
 
             st.dataframe(
                 display_df,
@@ -992,26 +1453,48 @@ def main():
             )
 
             st.caption(
-                f"Exibindo {len(display_df):,} registros do filtro atual."
+                f"Exibindo {len(display_df):,} "
+                "registros do filtro atual."
                 .replace(",", ".")
             )
 
         return
 
     if len(filtered) <= 5:
-        st.warning("A amostra filtrada possui poucos dados para uma análise confiável.")
+
+        st.warning(
+            "A amostra filtrada possui poucos dados "
+            "para uma análise confiável."
+        )
+
         return
 
-    scatter, sleep_heatmap, focus_bar, heatmap, corr = build_charts(filtered)
-    age_bar, fomo_bar = build_age_charts(filtered)
-    profile_bar, sleep_lollipop = build_dependency_charts(filtered)
-    usage_profile_donut, productivity_fomo_bar = build_additional_charts(filtered)
+    (
+        scatter,
+        sleep_heatmap,
+        focus_bar,
+        heatmap,
+        corr,
+    ) = build_charts(filtered)
 
-    tab_perfil, tab_foco, tab_prod, tab_sono, tab_bem_estar = st.tabs(
+    age_bar, fomo_bar = (
+        build_age_charts(filtered)
+    )
+
+    profile_bar, sleep_lollipop = (
+        build_dependency_charts(filtered)
+    )
+
+    (
+        usage_profile_donut,
+        productivity_fomo_bar,
+    ) = build_additional_charts(filtered)
+
+    tab_prod, tab_perfil, tab_foco, tab_sono, tab_bem_estar = st.tabs(
         [
+            "Produtividade",
             "Perfil e uso",
             "Foco e concentração",
-            "Produtividade",
             "Sono e hábitos digitais",
             "Bem-estar e dependência digital",
         ]
@@ -1020,178 +1503,332 @@ def main():
     # ==================================================
     # PERFIL DOS PARTICIPANTES E USO DAS REDES
     # ==================================================
+
     with tab_perfil:
+
         page_description(
-            "Apresenta o perfil da amostra e como o uso das redes sociais se distribui "
-            "entre os participantes, considerando intensidade de uso e diferenças entre "
-            "faixas etárias."
+            "Apresenta o perfil da amostra e como o "
+            "uso das redes sociais se distribui entre "
+            "os participantes, considerando intensidade "
+            "de uso e diferenças entre faixas etárias."
         )
 
         with st.container(border=True):
-            section_title("Distribuição dos participantes por intensidade de uso")
-            chart_caption(
-                "Mostra a participação de cada nível de uso no total da amostra."
-            )
-            plot(usage_profile_donut)
 
-        if age_bar is not None and fomo_bar is not None:
-            col_perfil_1, col_perfil_2 = st.columns(2, gap="large")
+            section_title(
+                "Distribuição dos participantes por intensidade de uso"
+            )
+
+            chart_caption(
+                "Mostra a participação de cada nível de "
+                "uso no total da amostra."
+            )
+
+            plot(
+                usage_profile_donut
+            )
+
+        if (
+            age_bar is not None
+            and fomo_bar is not None
+        ):
+
+            col_perfil_1, col_perfil_2 = (
+                st.columns(
+                    2,
+                    gap="large",
+                )
+            )
 
             with col_perfil_1:
+
                 with st.container(border=True):
-                    section_title("Uso de redes sociais por faixa etária")
-                    chart_caption(
-                        "Tempo médio diário de uso das redes sociais entre as diferentes faixas etárias."
+
+                    section_title(
+                        "Uso de redes sociais por faixa etária"
                     )
+
+                    chart_caption(
+                        "Tempo médio diário de uso das redes "
+                        "sociais entre as diferentes faixas etárias."
+                    )
+
                     plot(age_bar)
 
             with col_perfil_2:
+
                 with st.container(border=True):
-                    section_title("FOMO por faixa etária")
-                    chart_caption(
-                        "Nível médio de FOMO entre as diferentes faixas etárias."
+
+                    section_title(
+                        "FOMO por faixa etária"
                     )
+
+                    chart_caption(
+                        "Nível médio de FOMO entre as "
+                        "diferentes faixas etárias."
+                    )
+
                     plot(fomo_bar)
+
         else:
+
             st.info(
-                "A coluna de idade não está disponível no conjunto de dados carregado; "
-                "as análises por faixa etária não podem ser exibidas."
+                "A coluna de idade não está disponível "
+                "no conjunto de dados carregado; as "
+                "análises por faixa etária não podem "
+                "ser exibidas."
             )
 
     # ==================================================
     # REDES SOCIAIS, FOCO E CONCENTRAÇÃO
     # ==================================================
+
     with tab_foco:
+
         page_description(
-            "Investiga a relação entre a intensidade de uso das redes sociais e a "
-            "dificuldade de manter o foco e a concentração nas atividades do dia a dia."
+            "Investiga a relação entre a intensidade de "
+            "uso das redes sociais e a dificuldade de "
+            "manter o foco e a concentração nas atividades "
+            "do dia a dia."
         )
 
         with st.container(border=True):
-            section_title("Intensidade de uso e dificuldade de foco")
-            chart_caption(
-                "Comparação da dificuldade média de foco entre diferentes intensidades de uso."
+
+            section_title(
+                "Intensidade de uso e dificuldade de foco"
             )
+
+            chart_caption(
+                "Comparação da dificuldade média de foco "
+                "entre diferentes intensidades de uso."
+            )
+
             plot(focus_bar)
+
             st.info(
-                "Escala utilizada: Nunca = 0, Raramente = 1, Às vezes = 2 e Sim = 3."
+                "Escala utilizada: Nunca = 0, Raramente = 1, "
+                "Às vezes = 2 e Sim = 3."
             )
 
     # ==================================================
     # REDES SOCIAIS E PRODUTIVIDADE
     # ==================================================
+
     with tab_prod:
+
         page_description(
-            "Analisa como o tempo diário nas redes sociais e os níveis de FOMO se "
-            "relacionam com a produtividade autorrelatada pelos participantes."
+            "Analisa como o tempo diário nas redes sociais "
+            "e os níveis de FOMO se relacionam com a "
+            "produtividade autorrelatada pelos participantes."
         )
 
-        col_prod_1, col_prod_2 = st.columns(2, gap="large")
+        col_prod_1, col_prod_2 = (
+            st.columns(
+                2,
+                gap="large",
+            )
+        )
 
         with col_prod_1:
+
             with st.container(border=True):
-                section_title("Uso diário de redes sociais e produtividade")
-                chart_caption(
-                    "Relação entre o tempo médio diário nas redes sociais e a produtividade autorrelatada."
+
+                section_title(
+                    "Uso diário de redes sociais e produtividade"
                 )
+
+                chart_caption(
+                    "Relação entre o tempo médio diário nas "
+                    "redes sociais e a produtividade autorrelatada."
+                )
+
                 plot(scatter)
 
                 if corr <= -0.20:
+
                     st.info(
-                        "A tendência geral indica que, conforme o tempo diário de uso das "
-                        "redes sociais aumenta, a produtividade relatada tende a diminuir."
+                        "A tendência geral indica que, conforme "
+                        "o tempo diário de uso das redes sociais "
+                        "aumenta, a produtividade relatada tende "
+                        "a diminuir."
                     )
+
                 elif corr >= 0.20:
+
                     st.info(
-                        "A tendência geral indica que, conforme o tempo diário de uso das "
-                        "redes sociais aumenta, a produtividade relatada tende a aumentar."
+                        "A tendência geral indica que, conforme "
+                        "o tempo diário de uso das redes sociais "
+                        "aumenta, a produtividade relatada tende "
+                        "a aumentar."
                     )
+
                 else:
+
                     st.info(
-                        "Neste recorte, não aparece uma tendência clara entre o tempo diário "
-                        "de uso das redes sociais e a produtividade relatada."
+                        "Neste recorte, não aparece uma tendência "
+                        "clara entre o tempo diário de uso das "
+                        "redes sociais e a produtividade relatada."
                     )
 
         with col_prod_2:
+
             with st.container(border=True):
-                section_title("Produtividade por nível de FOMO")
-                chart_caption(
-                    "Compara a produtividade média entre participantes com "
-                    "níveis baixo, médio e alto de FOMO."
+
+                section_title(
+                    "Produtividade por nível de FOMO"
                 )
-                plot(productivity_fomo_bar)
+
+                chart_caption(
+                    "Compara a produtividade média entre "
+                    "participantes com níveis baixo, médio "
+                    "e alto de FOMO."
+                )
+
+                plot(
+                    productivity_fomo_bar
+                )
+
                 st.info(
-                    "A comparação ajuda a observar se níveis diferentes de FOMO aparecem "
-                    "associados a diferenças na produtividade autorrelatada."
+                    "A comparação ajuda a observar se níveis "
+                    "diferentes de FOMO aparecem associados a "
+                    "diferenças na produtividade autorrelatada."
                 )
 
     # ==================================================
     # REDES SOCIAIS, SONO E HÁBITOS DIGITAIS
     # ==================================================
+
     with tab_sono:
+
         page_description(
-            "Explora hábitos digitais ligados ao período noturno, relacionando frequência "
-            "de uso, doomscrolling, qualidade do sono e níveis de FOMO."
+            "Explora hábitos digitais ligados ao período "
+            "noturno, relacionando frequência de uso, "
+            "doomscrolling, qualidade do sono e níveis de FOMO."
         )
 
-        col_sono_1, col_sono_2 = st.columns(2, gap="large")
+        col_sono_1, col_sono_2 = (
+            st.columns(
+                2,
+                gap="large",
+            )
+        )
 
         with col_sono_1:
+
             with st.container(border=True):
-                section_title("Uso noturno e qualidade do sono")
-                chart_caption(
-                    "Distribuição da qualidade do sono conforme a frequência de uso noturno."
+
+                section_title(
+                    "Uso noturno e qualidade do sono"
                 )
-                plot(sleep_heatmap)
+
+                chart_caption(
+                    "Concentração de participantes por "
+                    "frequência de uso noturno e qualidade "
+                    "do sono."
+                )
+
+                plot(
+                    sleep_heatmap
+                )
+
                 st.info(
-                    "Quanto mais intensa a cor, maior a concentração de participantes naquela combinação."
+                    "Quanto mais intensa a cor, maior a "
+                    "concentração de participantes naquela "
+                    "combinação."
                 )
 
         with col_sono_2:
+
             with st.container(border=True):
-                section_title("Doomscrolling e níveis de FOMO")
-                chart_caption(
-                    "Concentração de participantes por frequência de doomscrolling e nível de FOMO."
+
+                section_title(
+                    "Doomscrolling e níveis de FOMO"
                 )
-                plot(heatmap)
+
+                chart_caption(
+                    "Concentração de participantes por "
+                    "frequência de doomscrolling e nível de FOMO."
+                )
+
+                plot(
+                    heatmap
+                )
+
                 st.info(
-                    "Quanto mais intensa a cor, maior a concentração de participantes naquela combinação."
+                    "Quanto mais intensa a cor, maior a "
+                    "concentração de participantes naquela "
+                    "combinação."
                 )
 
     # ==================================================
     # BEM-ESTAR PSICOLÓGICO E DEPENDÊNCIA DIGITAL
     # ==================================================
+
     with tab_bem_estar:
+
         page_description(
-            "Reúne indicadores de comportamento digital para observar como FOMO, "
-            "doomscrolling, uso noturno, dificuldade de foco e qualidade do sono se "
-            "relacionam dentro da amostra analisada."
+            "Reúne indicadores de comportamento digital "
+            "para observar como FOMO, doomscrolling, uso "
+            "noturno, dificuldade de foco e qualidade do "
+            "sono se relacionam dentro da amostra analisada."
         )
 
-        if profile_bar is not None and sleep_lollipop is not None:
-            col_bem_1, col_bem_2 = st.columns([1.25, 1], gap="large")
+        if (
+            profile_bar is not None
+            and sleep_lollipop is not None
+        ):
+
+            col_bem_1, col_bem_2 = (
+                st.columns(
+                    [1.25, 1],
+                    gap="large",
+                )
+            )
 
             with col_bem_1:
+
                 with st.container(border=True):
-                    section_title("Comportamentos associados aos níveis de FOMO")
-                    chart_caption(
-                        "Comparação entre uso noturno, doomscrolling e dificuldade de foco."
+
+                    section_title(
+                        "Comportamentos associados aos níveis de FOMO"
                     )
+
+                    chart_caption(
+                        "Comparação entre uso noturno, "
+                        "doomscrolling e dificuldade de foco."
+                    )
+
                     plot(profile_bar)
+
                     st.info(
-                        "Os indicadores foram normalizados de 0 a 1 para permitir a "
-                        "comparação entre escalas diferentes."
+                        "Os indicadores foram normalizados de "
+                        "0 a 1 para permitir a comparação entre "
+                        "escalas diferentes."
                     )
 
             with col_bem_2:
+
                 with st.container(border=True):
-                    section_title("Qualidade do sono por nível de FOMO")
-                    chart_caption(
-                        "Comparação da qualidade média do sono entre os diferentes níveis de FOMO."
+
+                    section_title(
+                        "Qualidade do sono por nível de FOMO"
                     )
-                    plot(sleep_lollipop)
+
+                    chart_caption(
+                        "Comparação da qualidade média do sono "
+                        "entre os diferentes níveis de FOMO."
+                    )
+
+                    plot(
+                        sleep_lollipop
+                    )
+
         else:
-            st.info("Não há dados suficientes para exibir as análises de FOMO.")
+
+            st.info(
+                "Não há dados suficientes para exibir "
+                "as análises de FOMO."
+            )
 
 
 if __name__ == "__main__":
