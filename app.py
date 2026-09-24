@@ -190,8 +190,7 @@ def style_chart(fig, y_range=None, showlegend=False, height=340):
         ),
         xaxis=dict(showgrid=False, title_font=dict(color=TEXT)),
         yaxis=dict(
-            showgrid=True,
-            gridcolor=GRID,
+            showgrid=False,
             range=y_range,
             title_font=dict(color=TEXT),
         ),
@@ -930,29 +929,8 @@ def main():
     if "show_raw_data" not in st.session_state:
         st.session_state.show_raw_data = False
 
-    st.sidebar.divider()
-    st.sidebar.subheader("Consulta")
-
-    sidebar_button_label = (
-        "Voltar ao painel"
-        if st.session_state.show_raw_data
-        else "Consultar dados brutos"
-    )
-
-    sidebar_button_help = (
-        "Retorna para as análises do painel."
-        if st.session_state.show_raw_data
-        else "Abre a tabela com os dados considerados pelo filtro atual."
-    )
-
-    if st.sidebar.button(
-        sidebar_button_label,
-        use_container_width=True,
-        type="primary",
-        help=sidebar_button_help,
-    ):
-        st.session_state.show_raw_data = not st.session_state.show_raw_data
-        st.rerun()
+    # Consulta dos dados brutos foi reposicionada para o final do painel,
+    # evitando alterar a navegação principal pela barra lateral.
 
     st.title("Painel de Mídias Sociais e Produtividade")
 
@@ -984,30 +962,7 @@ def main():
             f"{filtered[FOMO].mean():.1f}",
         )
 
-    # Tela dedicada de consulta, acessada pelo menu lateral.
-    if st.session_state.show_raw_data:
-        with st.container(border=True):
-            section_title("Consulta dos dados")
-            page_description(
-                "Visualize os registros considerados no intervalo selecionado nos filtros. "
-                "Os nomes das variáveis foram adaptados para facilitar a leitura."
-            )
-
-            display_df = filtered.rename(columns=DISPLAY_LABELS)
-
-            st.dataframe(
-                display_df,
-                use_container_width=True,
-                hide_index=True,
-                height=520,
-            )
-
-            st.caption(
-                f"Exibindo {len(display_df):,} registros do filtro atual."
-                .replace(",", ".")
-            )
-
-        return
+    # Consulta dos dados brutos fica disponível no final do dashboard.
 
     if len(filtered) <= 5:
         st.warning("A amostra filtrada possui poucos dados para uma análise confiável.")
@@ -1203,6 +1158,26 @@ def main():
                     plot(sleep_lollipop)
         else:
             st.info("Não há dados suficientes para exibir as análises de FOMO.")
+    st.divider()
+    with st.expander("Consultar dados brutos"):
+        page_description(
+            "Visualize os registros considerados no intervalo selecionado nos filtros. "
+            "Os nomes das variáveis foram adaptados para facilitar a leitura."
+        )
+
+        display_df = filtered.rename(columns=DISPLAY_LABELS)
+        st.dataframe(
+            display_df,
+            use_container_width=True,
+            hide_index=True,
+            height=520,
+        )
+
+        st.caption(
+            f"Exibindo {len(display_df):,} registros do filtro atual."
+            .replace(",", ".")
+        )
+
 
 if __name__ == "__main__":
     main()
