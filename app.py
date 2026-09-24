@@ -681,12 +681,15 @@ def main():
         f"""
         <style>
             .block-container {{
-                padding-top: 2rem;
+                padding-top: 1.5rem;
                 padding-bottom: 3rem;
             }}
 
-            h1 {{
+            div[data-testid="stHeading"] h1 {{
                 color: {TEXT};
+                font-size: 1.25rem !important;
+                line-height: 1.3;
+                margin: 0 0 0.5rem;
             }}
 
             [data-testid="stMetricValue"] {{
@@ -694,10 +697,17 @@ def main():
             }}
 
             div[data-testid="stMetric"] {{
-                background-color: white;
-                border: 1px solid #EAEAEA;
-                padding: 0.9rem 1rem;
-                border-radius: 0.75rem;
+                background-color: transparent;
+                border: none;
+                padding: 0 0.25rem;
+            }}
+
+            div[data-testid="stMetricLabel"] {{
+                font-size: 0.8rem;
+            }}
+
+            div[data-testid="stMetricValue"] {{
+                font-size: 1.35rem;
             }}
 
             /* Controles de filtro: mesma identidade azul-petróleo */
@@ -758,6 +768,15 @@ def main():
             .stTabs button[data-baseweb="tab"][aria-selected="true"],
             .stTabs button[data-baseweb="tab"][aria-selected="true"] p {{
                 color: {PRIMARY} !important;
+            }}
+
+            .stTabs button[data-baseweb="tab"][aria-controls$="-tabpanel-0"][aria-selected="true"],
+            .stTabs button[data-baseweb="tab"][aria-controls$="-tabpanel-0"][aria-selected="true"] p {{
+                color: {PRIMARY} !important;
+            }}
+
+            .stTabs div[data-baseweb="tab-list"]:has(button[data-baseweb="tab"][aria-controls$="-tabpanel-0"][aria-selected="true"]) > div[data-baseweb="tab-highlight"] {{
+                background-color: {PRIMARY} !important;
             }}
 
             .stTabs button[data-baseweb="tab"]:hover,
@@ -936,14 +955,24 @@ def main():
         st.rerun()
 
     st.title("Painel de Mídias Sociais e Produtividade")
-    st.caption(
-        "Análise das relações entre uso de redes sociais, foco, sono, FOMO e produtividade."
-    )
 
     with st.container(border=True):
-        section_title("Visão geral da amostra")
+        st.markdown(
+            f"""
+            <h3 style="
+                color:{PRIMARY};
+                font-size:1.1rem;
+                font-weight:700;
+                margin:0 0 0.25rem 0;
+                line-height:1.2;
+            ">
+                Visão geral da amostra
+            </h3>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        c1, c2, c3, c4 = st.columns(4)
+        c1, c2, c3, c4 = st.columns(4, gap="small")
         c1.metric("Participantes", f"{len(filtered):,}".replace(",", "."))
         c2.metric("Tempo médio diário", f"{filtered[USAGE].mean():.1f} h")
         c3.metric(
@@ -989,11 +1018,11 @@ def main():
     profile_bar, sleep_lollipop = build_dependency_charts(filtered)
     usage_profile_donut, productivity_fomo_bar = build_additional_charts(filtered)
 
-    tab_perfil, tab_foco, tab_prod, tab_sono, tab_bem_estar = st.tabs(
+    tab_prod, tab_perfil, tab_foco, tab_sono, tab_bem_estar = st.tabs(
         [
+            "Produtividade",
             "Perfil e uso",
             "Foco e concentração",
-            "Produtividade",
             "Sono e hábitos digitais",
             "Bem-estar e dependência digital",
         ]
