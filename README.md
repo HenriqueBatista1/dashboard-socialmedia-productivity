@@ -12,6 +12,20 @@ Este projeto consiste em um dashboard desenvolvido em Python para a **Atividade 
 
 ---
 
+## 🌐 Deploy
+
+Acesse o dashboard publicado no Streamlit:
+
+https://digital-habit-tracker.streamlit.app/
+
+### Fonte dos dados
+
+O dataset utilizado está disponível no Kaggle:
+
+https://www.kaggle.com/datasets/manaswinsripatnala/social-media-dopamine-and-productivity-dataset/data
+
+---
+
 ## 🚀 Passo a Passo para Instalação e Execução
 
 ### 1. Clonar o Repositório
@@ -37,15 +51,10 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-### Link do Dataset (Source)
-
-https://www.kaggle.com/datasets/manaswinsripatnala/social-media-dopamine-and-productivity-dataset/data
-
-### Executar os testes
+### 5. Executar os testes
 
 ```bash
 python -m pytest tests/ -q
 ```
 
-Os testes verificam o tratamento dos dados, as categorias calculadas e os contratos
-dos gráficos produzidos pelo dashboard.
+Os testes unitários garantem a integridade do tratamento de dados, a ordenação correta das categorias e a consistência da estrutura dos gráficos gerados pelo dashboard.
