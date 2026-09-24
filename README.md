@@ -40,3 +40,12 @@ streamlit run app.py
 ### Link do Dataset (Source)
 
 https://www.kaggle.com/datasets/manaswinsripatnala/social-media-dopamine-and-productivity-dataset/data
+
+### Executar os testes
+
+```bash
+python -m pytest tests/ -q
+```
+
+Os testes verificam o tratamento dos dados, as categorias calculadas e os contratos
+dos gráficos produzidos pelo dashboard.
