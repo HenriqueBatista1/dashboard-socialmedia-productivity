@@ -753,8 +753,7 @@ def main():
             /* A versão atual do Streamlit usa --st-primary-color */
             :root,
             .stApp,
-            [data-testid="stAppViewContainer"],
-            [data-testid="stSidebar"] {{
+            [data-testid="stAppViewContainer"] {{
                 --st-primary-color: {PRIMARY} !important;
                 --primary-color: {PRIMARY} !important;
             }}
@@ -840,8 +839,6 @@ def main():
         st.error("Dataset não encontrado ou inválido.")
         return
 
-    st.sidebar.header("Filtro de análise")
-
     min_use = float(df[USAGE].min())
     max_use = float(df[USAGE].max())
 
@@ -883,52 +880,50 @@ def main():
         st.session_state.usage_max_input = upper
         st.session_state.usage_range = (lower, upper)
 
-    st.sidebar.slider(
-        "Horas diárias de uso das redes sociais",
-        min_value=min_use,
-        max_value=max_use,
-        value=st.session_state.usage_range,
-        step=0.1,
-        key="usage_range",
-        on_change=sync_from_slider,
-        help="Arraste os marcadores ou digite abaixo os valores exatos do intervalo.",
-    )
-
-    input_col1, input_col2 = st.sidebar.columns(2)
-
-    with input_col1:
-        st.number_input(
-            "Mínimo",
-            min_value=min_use,
-            max_value=max_use,
-            step=0.1,
-            format="%.2f",
-            key="usage_min_input",
-            on_change=sync_from_min_input,
-        )
-
-    with input_col2:
-        st.number_input(
-            "Máximo",
-            min_value=min_use,
-            max_value=max_use,
-            step=0.1,
-            format="%.2f",
-            key="usage_max_input",
-            on_change=sync_from_max_input,
-        )
-
-    filtro = st.session_state.usage_range
-    filtered = df[df[USAGE].between(*filtro)]
-
     # Navegação para consulta dos dados.
     if "show_raw_data" not in st.session_state:
         st.session_state.show_raw_data = False
 
-    # Consulta dos dados brutos foi reposicionada para o final do painel,
-    # evitando alterar a navegação principal pela barra lateral.
-
     st.title("Painel de Mídias Sociais e Produtividade")
+
+    with st.expander("Filtro de análise", expanded=False):
+        st.slider(
+            "Horas diárias de uso das redes sociais",
+            min_value=min_use,
+            max_value=max_use,
+            value=st.session_state.usage_range,
+            step=0.1,
+            key="usage_range",
+            on_change=sync_from_slider,
+            help="Arraste os marcadores ou digite abaixo os valores exatos do intervalo.",
+        )
+
+        input_col1, input_col2 = st.columns(2)
+
+        with input_col1:
+            st.number_input(
+                "Mínimo",
+                min_value=min_use,
+                max_value=max_use,
+                step=0.1,
+                format="%.2f",
+                key="usage_min_input",
+                on_change=sync_from_min_input,
+            )
+
+        with input_col2:
+            st.number_input(
+                "Máximo",
+                min_value=min_use,
+                max_value=max_use,
+                step=0.1,
+                format="%.2f",
+                key="usage_max_input",
+                on_change=sync_from_max_input,
+            )
+
+    filtro = st.session_state.usage_range
+    filtered = df[df[USAGE].between(*filtro)]
 
     with st.container(border=True):
         st.markdown(
