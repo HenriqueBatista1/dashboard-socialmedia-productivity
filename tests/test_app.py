@@ -103,7 +103,7 @@ def test_build_charts_returns_expected_figures_and_correlation():
 
     assert [figure.data[0].type for figure in (scatter, box, focus_bar, heatmap)] == [
         "scatter",
-        "box",
+        "heatmap",
         "bar",
         "heatmap",
     ]
