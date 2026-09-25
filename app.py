@@ -287,38 +287,34 @@ def build_charts(df):
 
     style_chart(scatter)
 
-    night_colors = {
-        "Nunca": "#DDEEEE",
-        "Raramente": "#A9CECF",
-        "Às vezes": "#69A7A8",
-        "Frequentemente": PRIMARY,
-        "Diariamente": PRIMARY_DARK,
-    }
+    sleep_heatmap_data = pd.crosstab(
+        df["Uso noturno"], df[SLEEP],
+    ).reindex(index=NIGHT_ORDER, columns=[1, 2, 3, 4, 5], fill_value=0)
 
-    box = px.box(
-        df,
-        x="Uso noturno",
-        y=SLEEP,
-        color="Uso noturno",
-        category_orders={"Uso noturno": NIGHT_ORDER},
-        color_discrete_map=night_colors,
+    sleep_heatmap = px.imshow(
+        sleep_heatmap_data,
+        text_auto=True,
+        aspect="auto",
+        color_continuous_scale=[
+            [0.00, "#F2F8F8"], [0.25, "#DDEEEE"],
+            [0.50, "#A9CECF"], [0.75, "#69A7A8"], [1.00, PRIMARY_DARK],
+        ],
         labels={
-            "Uso noturno": "Frequência de uso noturno",
-            SLEEP: "Qualidade do sono (1–5)",
+            "x": "Qualidade do sono (1–5)",
+            "y": "Frequência de uso noturno",
+            "color": "Participantes",
         },
-        points="outliers",
     )
-
-    box.update_traces(
-        line=dict(width=2),
+    sleep_heatmap.update_traces(
         hovertemplate=(
-            "Uso noturno: %{x}"
-            "<br>Qualidade do sono: %{y:.1f}"
+            "Uso noturno: %{y}"
+            "<br>Qualidade do sono: %{x}"
+            "<br>Participantes: %{z}"
             "<extra></extra>"
-        ),
+        )
     )
-    style_chart(box, [0.5, 5.5])
-    box.update_layout(showlegend=False)
+    sleep_heatmap.update_coloraxes(colorbar=dict(title="Participantes"))
+    style_chart(sleep_heatmap)
 
     focus_df = (
         df.groupby("Intensidade de uso", observed=True)[FOCUS]
@@ -391,7 +387,7 @@ def build_charts(df):
     )
     style_chart(heatmap)
 
-    return scatter, box, focus_bar, heatmap, corr
+    return scatter, sleep_heatmap, focus_bar, heatmap, corr
 
 
 def build_age_charts(df):
@@ -968,7 +964,7 @@ def main():
         st.warning("A amostra filtrada possui poucos dados para uma análise confiável.")
         return
 
-    scatter, box, focus_bar, heatmap, corr = build_charts(filtered)
+    scatter, sleep_heatmap, focus_bar, heatmap, corr = build_charts(filtered)
     age_bar, fomo_bar = build_age_charts(filtered)
     profile_bar, sleep_lollipop = build_dependency_charts(filtered)
     usage_profile_donut, productivity_fomo_bar = build_additional_charts(filtered)
@@ -1106,11 +1102,11 @@ def main():
             with st.container(border=True):
                 section_title("Uso noturno e qualidade do sono")
                 chart_caption(
-                    "Distribuição da qualidade do sono conforme a frequência de uso noturno."
+                    "Concentração de participantes por frequência de uso noturno e qualidade do sono."
                 )
-                plot(box)
+                plot(sleep_heatmap)
                 st.info(
-                    "Os tons ficam mais escuros conforme aumenta a frequência de uso noturno."
+                    "Quanto mais intensa a cor, maior a concentração de participantes naquela combinação."
                 )
 
         with col_sono_2:
